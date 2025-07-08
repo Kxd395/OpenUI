@@ -4,17 +4,22 @@ import {
 	ArrowRightIcon,
 	CheckIcon
 } from '@radix-ui/react-icons'
-import { Action, convert, createOrRefine } from 'api/openai'
+import { Action, convert, createOrRefine, createOrRefineWithTools } from 'api/openai'
 import { getShare } from 'api/openui'
 import CodeViewer from 'components/CodeViewer'
 import Examples from 'components/Examples'
 import HTMLAnnotator, { type Script } from 'components/HtmlAnnotator'
+import ToolExecutor from 'components/ToolExecutor'
+import ChatInput from 'components/ChatInput'
+import SavedPrompts from 'components/SavedPrompts'
 import { Button } from 'components/ui/button'
-import { Textarea } from 'components/ui/textarea'
 import { useMediaQuery, useThrottle } from 'hooks'
 import { useAtom, useAtomValue } from 'jotai'
 import { parseMarkdown } from 'lib/markdown'
 import { MOBILE_WIDTH, cn } from 'lib/utils'
+import { ToolCall } from 'lib/toolExecutor'
+import { toolsEnabledAtom } from 'stores/tools'
+import { savedPromptsActionsAtom } from 'stores/prompts'
 
 import { nanoid } from 'nanoid'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -90,7 +95,6 @@ export default function Builder({ shared }: { shared?: boolean }) {
 	const temperature = useAtomValue(temperatureAtom)
 	const systemPrompt = useAtomValue(systemPromptAtom)
 	const imageUploadRef = useRef<HTMLInputElement>(null)
-	const queryRef = useRef<HTMLTextAreaElement>(null)
 	// TODO: this is rather hacky to support history
 	const curMarkdown = (item.markdown ?? '').split(/---\nprompt:.+\n---/gm).pop()
 	const [markdown, setMarkdown] = useState<string>(curMarkdown ?? '')
@@ -104,6 +108,11 @@ export default function Builder({ shared }: { shared?: boolean }) {
 	const [llmHidden, setLLMHidden] = useState<boolean>(markdown !== '')
 	// Create for new, refine for existed
 	const action: Action = editing ? 'refine' : 'create';
+
+	// Tool execution state
+	const [toolCalls, setToolCalls] = useState<ToolCall[]>([])
+	const toolsEnabled = useAtomValue(toolsEnabledAtom)
+	const [savedPromptsActions, dispatchSavedPrompts] = useAtom(savedPromptsActionsAtom)
 
 	// TODO: likely replace with item.components
 	// const [jsx, setJSX] = useState<string>('')
@@ -189,7 +198,12 @@ export default function Builder({ shared }: { shared?: boolean }) {
 			setMarkdown('')
 			setAnnotatedHTML('')
 			setRenderError(undefined)
-			createOrRefine(
+			setToolCalls([])
+			
+			// Use tool-enabled version if tools are enabled
+			const streamFunction = toolsEnabled ? createOrRefineWithTools : createOrRefine
+			
+			streamFunction(
 				{
 					query,
 					model,
@@ -201,15 +215,15 @@ export default function Builder({ shared }: { shared?: boolean }) {
 				},
 				md => {
 					setMarkdown(prevMD => (prevMD || '') + md)
-				}
+				},
+				toolsEnabled ? (toolCall: ToolCall) => {
+					setToolCalls(prev => [...prev, toolCall])
+				} : undefined
 			)
 				.then(final => {
 					setScreenshot('');
 					setRendering(false)
-					saveMarkdown(final)
-					if (queryRef.current) {
-						queryRef.current.value = ''
-					}
+					saveMarkdown(typeof final === 'string' ? final : final.response || '')
 					// setLLMHidden(true)
 				})
 				.catch((error: Error) => {
@@ -230,7 +244,8 @@ export default function Builder({ shared }: { shared?: boolean }) {
 			setRenderError,
 			setAnnotatedHTML,
 			saveMarkdown,
-			temperature
+			temperature,
+			toolsEnabled
 		]
 	)
 
@@ -309,10 +324,7 @@ export default function Builder({ shared }: { shared?: boolean }) {
 		[navigation, setHistoryIds]
 	)
 
-	const onSubmit = async (e: React.FormEvent | React.KeyboardEvent) => {
-		e.preventDefault()
-
-		let query = queryRef.current?.value.trim() ?? '';
+	const handleChatSubmit = async (query: string) => {
 		if (screenshot === '' && query === '') {
 			return;
 		}
@@ -330,6 +342,27 @@ export default function Builder({ shared }: { shared?: boolean }) {
 			prompts: [...(it.prompts ?? [it.prompt]), query]
 		}))
 		streamResponse(query, pureHTML)
+	}
+
+	const handleImageUpload = (file: File) => {
+		const reader = new FileReader();
+		reader.onload = () => setScreenshot(reader.result as string);
+		reader.readAsDataURL(file);
+	}
+
+	const handleSavePrompt = (prompt: string) => {
+		dispatchSavedPrompts({
+			type: 'add',
+			payload: {
+				text: prompt,
+				category: editing ? 'UI Modification' : 'UI Creation',
+				tags: [model, action]
+			}
+		});
+	}
+
+	const handleRemoveScreenshot = () => {
+		setScreenshot('');
 	}
 
 	function parseJs(dom: Document): Script[] {
@@ -449,9 +482,6 @@ export default function Builder({ shared }: { shared?: boolean }) {
 				onClick={() => {
 					const hiding = !llmHidden
 					setLLMHidden(hiding)
-					if (queryRef.current && !hiding) {
-						queryRef.current.focus()
-					}
 				}}
 				variant='ghost'
 				size='icon'
@@ -468,74 +498,32 @@ export default function Builder({ shared }: { shared?: boolean }) {
 					<DoubleArrowDownIcon className='inline-block h-5 w-5' />
 				)}
 			</Button>
-			{/* eslint-disable-next-line @typescript-eslint/no-misused-promises */}
-			<Form onSubmit={onSubmit}>
-				<input
-					ref={imageUploadRef}
-					id='file-input'
-					type='file'
-					className='hidden'
-					accept='image/*'
-					onChange={e => {
-						const file = e.target.files?.[0] ?? null;
-						if (file === null) {
-							return;
-						}
-						const reader = new FileReader();
-						reader.onload = () =>
-							setScreenshot(reader.result as string);
-						reader.readAsDataURL(file);
+			{/* Chat Input */}
+			{!llmHidden && (
+				<ChatInput
+					onSubmit={handleChatSubmit}
+					placeholder={
+						editing
+							? 'Ask for changes to the current UI'
+							: screenshot ? 'Describe the screenshot you uploaded (Optional)' : 'Describe a UI you desire'
+					}
+					disabled={rendering}
+					editing={editing}
+					onImageUpload={handleImageUpload}
+					onSavePrompt={handleSavePrompt}
+					hasScreenshot={!!screenshot}
+					onRemoveScreenshot={handleRemoveScreenshot}
+				/>
+			)}
+
+			{/* Saved Prompts - Position it in the top right */}
+			<div className="fixed top-4 right-4 z-50">
+				<SavedPrompts
+					onSelectPrompt={(prompt) => {
+						handleChatSubmit(prompt);
 					}}
 				/>
-				<div
-					id='llm-input'
-					className={cn(
-						`absolute left-[calc(50%)] z-0 flex w-11/12 -translate-x-1/2 justify-center rounded-full bg-background px-8 py-4 align-middle transition-all duration-500 lg:max-w-full`,
-						llmHidden && 'translate-y-24 opacity-0'
-					)}
-					style={
-						/* calc(45px + env(safe-area-inset-bottom, 0px)) */ {
-							bottom: `${bigEnough ? 45 : 145}px`
-						}
-					}
-				>
-					<Textarea
-						name='query'
-						rows={1}
-						className='min-h-[41px] min-w-0 flex-1 resize-none rounded-none border-none text-base focus-visible:ring-0 focus-visible:ring-offset-0'
-						placeholder={
-							editing
-								? 'Ask for changes to the current UI'
-								: screenshot ? 'Describe the screenshot you uploaded (Optional)' : 'Describe a UI you desire'
-						}
-						ref={queryRef}
-						// eslint-disable-next-line react/jsx-handler-names
-						onKeyDown={async (e: React.KeyboardEvent) => {
-							if (e.key === 'Enter') {
-								await onSubmit(e);
-							}
-						}}
-					/>
-					<div className='flex items-center'>
-						{rendering ? (
-							<div className='h-8 w-8 flex-none animate-spin rounded-full bg-gradient-to-r from-purple-500 via-pink-500 to-red-500' />
-						) : (
-							<Button
-								className='h-8 w-8 flex-none rounded-full'
-								variant='outline'
-								size='icon'
-								type='submit'
-							>
-								{editing ? (
-									<CheckIcon className='h-6 w-6' />
-								) : (
-									<ArrowRightIcon className='h-6 w-6' />
-								)}
-							</Button>
-						)}
-					</div>
-				</div>
-			</Form>
+			</div>
 		</div>
 	)
 }

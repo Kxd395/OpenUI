@@ -1,0 +1,16 @@
+:root {
+  --color-primary: #a78bfa;
+  --color-accent: #f472b6;
+  --color-bg: #f9fafb;
+  --color-card: #fff;
+  --color-muted: #e5e7eb;
+  --color-foreground: #18181b;
+}
+.dark {
+  --color-primary: #a78bfa;
+  --color-accent: #f472b6;
+  --color-bg: #18181b;
+  --color-card: #23272f;
+  --color-muted: #27272a;
+  --color-foreground: #f9fafb;
+}

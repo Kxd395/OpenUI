@@ -52,7 +52,7 @@ desc: {row['description']}
             ],
             max_tokens=2048,
             temperature=0.5,
-            model="gpt-3.5-turbo-1106",
+            model="gpt-4o",
             response_format={"type": "json_object"},
         )
         result = completion.choices[0].message.content

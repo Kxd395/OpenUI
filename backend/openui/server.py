@@ -65,7 +65,7 @@ app = FastAPI(
     description="API for proxying LLM requests to different services",
 )
 
-openai = AsyncOpenAI() # AsyncOpenAI(base_url="http://127.0.0.1:11434/v1")
+openai = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY", "dummy-key-for-testing"))
 ollama = AsyncClient()  
 router = APIRouter()
 session_store = DBSessionStore()
@@ -104,18 +104,34 @@ async def chat_completions(
     try:
         data = await request.json()  # chat_request.model_dump(exclude_unset=True)
         input_tokens = count_tokens(data["messages"])
-        # TODO: we always assume 4096 max tokens (random fudge factor here)
-        data["max_tokens"] = 4096 - input_tokens - 20
+        
+        # Set max tokens based on model capabilities
+        if data.get("model") in ["gpt-4o", "gpt-4-turbo"]:
+            max_total_tokens = 128000  # 128k context window
+        elif data.get("model") in ["o1-preview", "o1-mini"]:
+            max_total_tokens = 32000   # 32k context window
+        else:
+            max_total_tokens = 16000   # Default for other models
+            
+        data["max_tokens"] = min(4096, max_total_tokens - input_tokens - 20)
         if data.get("model").startswith("gpt"):
-            if data["model"] == "gpt-4" or data["model"] == "gpt-4-32k":
-                raise HTTPException(status=400, data="Model not supported")
+            # Block deprecated models
+            if data["model"] in ["gpt-4", "gpt-4-32k", "gpt-4-turbo-2024-04-09"]:
+                raise HTTPException(status_code=400, detail="Model not supported")
             response: AsyncStream[ChatCompletionChunk] = (
                 await openai.chat.completions.create(
                     **data,
                 )
             )
-            # gpt-4 tokens are 20x more expensive
-            multiplier = 20 if "gpt-4" in data["model"] else 1
+            # Set pricing multipliers based on model
+            if data["model"] in ["gpt-4o", "gpt-4-turbo"]:
+                multiplier = 15  # GPT-4o is about 15x more expensive than GPT-3.5
+            elif data["model"] in ["o1-preview", "o1-mini"]:
+                multiplier = 25  # o1 models are significantly more expensive
+            elif data["model"] == "gpt-4o-mini":
+                multiplier = 2   # GPT-4o Mini is about 2x more expensive than GPT-3.5
+            else:
+                multiplier = 1   # GPT-3.5 Turbo baseline
             return StreamingResponse(
                 openai_stream_generator(response, input_tokens, user_id, multiplier),
                 media_type="text/event-stream",
@@ -413,9 +429,10 @@ def check_wandb_auth():
 wandb_enabled = check_wandb_auth()
 
 if not wandb_enabled:
-    from weave.monitoring import openai as wandb_openai
-
-    wandb_openai.unpatch()
+    # TODO: Fix weave/wandb compatibility issue
+    # from weave.monitoring import openai as wandb_openai
+    # wandb_openai.unpatch()
+    pass
 
 
 class Server(uvicorn.Server):

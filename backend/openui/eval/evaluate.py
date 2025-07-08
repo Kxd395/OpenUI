@@ -39,7 +39,7 @@ base_dir = Path(__file__).parent / "datasets"
 @weave.type()
 class EvaluateQualityModel(Model):
     system_message: str
-    model_name: str = "gpt-4-vision-preview"
+    model_name: str = "gpt-4o"
     # "gpt-3.5-turbo-1106"
 
     @weave.op()

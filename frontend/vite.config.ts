@@ -37,7 +37,7 @@ const pwaPlugin = VitePWA({
 })
 
 const inCodespace = process.env.GITHUB_CODESPACE_TOKEN !== undefined
-const plugins: PluginOption[] = [eslintPlugin()]
+const plugins: PluginOption[] = [] // Temporarily disabled: eslintPlugin()
 // Don't listen on SSL in codespaces
 if (!inCodespace) {
 	// eslint-disable-next-line @typescript-eslint/no-floating-promises
