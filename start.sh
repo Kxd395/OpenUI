@@ -14,7 +14,7 @@ fi
 # Start the backend in the background
 echo "🔧 Starting backend server..."
 cd backend
-/workspaces/OpenUI/.venv/bin/python -m openui --dev &
+/usr/local/bin/python -m openui --dev &
 BACKEND_PID=$!
 
 # Wait a moment for the backend to start

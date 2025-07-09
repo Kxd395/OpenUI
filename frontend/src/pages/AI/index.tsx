@@ -1,11 +1,11 @@
 import {
-	DoubleArrowLeftIcon,
-	DoubleArrowRightIcon,
-	GearIcon,
-	GitHubLogoIcon,
-	Pencil2Icon,
-	Cross1Icon
-} from '@radix-ui/react-icons'
+	ChevronLeft,
+	ChevronRight,
+	Settings as SettingsIcon,
+	Github,
+	FilePen,
+	X,
+} from 'lucide-react';
 import ErrorBoundary from 'components/ErrorBoundary'
 import Head from 'components/Head'
 import HistoryItem from 'components/HistoryItem'
@@ -20,6 +20,8 @@ import { useEffect, useState } from 'react'
 import { Outlet, useNavigate, useParams } from 'react-router-dom'
 import { historyAtomFamily, historyIdsAtom } from 'state'
 
+import { copilot } from '../../api/copilot';
+
 export default function LayoutWithSidebar() {
 	const bigEnough = useMediaQuery(`(min-width: ${MOBILE_WIDTH}px)`)
 	const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(() => {
@@ -32,6 +34,16 @@ export default function LayoutWithSidebar() {
 	const params = useParams()
 	const curItem = useAtomValue(historyAtomFamily({ id: params.id ?? 'new' }))
 	const store = useStore()
+	const [refinedQuery, setRefinedQuery] = useState('');
+
+	const handleCopilotAction = async (action: string, query: string) => {
+		try {
+			const response = await copilot(action, query);
+			setRefinedQuery(response.query);
+		} catch (error) {
+			console.error('Error refining query:', error);
+		}
+	};
 
 	useEffect(() => {
 		if (params.id === undefined) {
@@ -74,7 +86,7 @@ export default function LayoutWithSidebar() {
 				!isHistoryCollapsed ? 'mr-[300px]' : 'mr-0'
 			)}>
 				<ErrorBoundary renderError={error => <LoadingOrError error={error} />}>
-					<Outlet />
+					<Outlet context={{ onCopilotAction: handleCopilotAction, refinedQuery, setRefinedQuery }} />
 				</ErrorBoundary>
 			</div>
 
@@ -104,7 +116,7 @@ export default function LayoutWithSidebar() {
 										target='_blank'
 										href='https://github.com/wandb/openui'
 									>
-										<GitHubLogoIcon className='h-4 w-4' />
+										<Github className='h-4 w-4' />
 									</a>
 								</Button>
 								<Settings
@@ -114,7 +126,7 @@ export default function LayoutWithSidebar() {
 											variant='ghost'
 											size='icon'
 										>
-											<GearIcon className='h-4 w-4' />
+											<SettingsIcon className='h-4 w-4' />
 										</Button>
 									}
 								/>
@@ -129,7 +141,7 @@ export default function LayoutWithSidebar() {
 									variant='ghost'
 									size='icon'
 								>
-									<Pencil2Icon className='h-4 w-4' />
+									<FilePen className='h-4 w-4' />
 								</Button>
 								{!bigEnough && (
 									<Button
@@ -138,7 +150,7 @@ export default function LayoutWithSidebar() {
 										variant='ghost'
 										size='icon'
 									>
-										<Cross1Icon className='h-4 w-4' />
+										<X className='h-4 w-4' />
 									</Button>
 								)}
 							</div>
@@ -199,9 +211,9 @@ export default function LayoutWithSidebar() {
 					size='icon'
 				>
 					{isHistoryCollapsed ? (
-						<DoubleArrowLeftIcon className='h-4 w-4' />
+						<ChevronLeft className='h-4 w-4' />
 					) : (
-						<DoubleArrowRightIcon className='h-4 w-4' />
+						<ChevronRight className='h-4 w-4' />
 					)}
 				</Button>
 			</div>
@@ -222,7 +234,7 @@ export default function LayoutWithSidebar() {
 					variant='ghost'
 					size='icon'
 				>
-					<GearIcon className='h-5 w-5' />
+					<SettingsIcon className='h-5 w-5' />
 				</Button>
 			)}
 
@@ -234,7 +246,7 @@ export default function LayoutWithSidebar() {
 					variant='ghost'
 					size='icon'
 				>
-					<DoubleArrowLeftIcon className='h-5 w-5' />
+					<ChevronLeft className='h-5 w-5' />
 				</Button>
 			)}
 		</div>

@@ -1,2 +1,49 @@
 .DS_Store
 nohup.out
+# IDE files
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Environment files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Node modules and build artifacts
+node_modules/
+dist/
+build/
+.next/
+out/
+
+# Testing
+coverage/
+.nyc_output
+.coverage
+htmlcov/
+
+# Misc
+.cache
+.parcel-cache

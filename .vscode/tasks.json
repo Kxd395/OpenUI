@@ -8,6 +8,153 @@
 			"group": "build",
 			"isBackground": true,
 			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"label": "Frontend: Install Dependencies",
+			"command": "npm install",
+			"group": "build",
+			"options": {
+				"cwd": "${workspaceFolder}/frontend"
+			},
+			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"label": "Frontend: Build",
+			"command": "npm run build",
+			"group": "build",
+			"options": {
+				"cwd": "${workspaceFolder}/frontend"
+			},
+			"dependsOn": "Frontend: Install Dependencies",
+			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"label": "Frontend: Dev Server",
+			"command": "npm run dev",
+			"group": "build",
+			"isBackground": true,
+			"options": {
+				"cwd": "${workspaceFolder}/frontend"
+			},
+			"dependsOn": "Frontend: Install Dependencies",
+			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"label": "Frontend: Test",
+			"command": "npm test",
+			"group": "test",
+			"options": {
+				"cwd": "${workspaceFolder}/frontend"
+			},
+			"dependsOn": "Frontend: Install Dependencies",
+			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"label": "Frontend: Lint",
+			"command": "npm run lint",
+			"group": "test",
+			"options": {
+				"cwd": "${workspaceFolder}/frontend"
+			},
+			"dependsOn": "Frontend: Install Dependencies",
+			"problemMatcher": ["$eslint-stylish"]
+		},
+		{
+			"type": "shell",
+			"label": "Backend: Install Dependencies",
+			"command": "/usr/local/bin/python -m pip install -e .",
+			"group": "build",
+			"options": {
+				"cwd": "${workspaceFolder}/backend"
+			},
+			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"label": "Backend: Run FastAPI (Dev)",
+			"command": "/usr/local/bin/python -m openui --dev",
+			"group": "build",
+			"isBackground": true,
+			"options": {
+				"cwd": "${workspaceFolder}/backend"
+			},
+			"dependsOn": "Backend: Install Dependencies",
+			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"label": "Backend: Run FastAPI (Prod)",
+			"command": "/usr/local/bin/python -m openui",
+			"group": "build",
+			"isBackground": true,
+			"options": {
+				"cwd": "${workspaceFolder}/backend"
+			},
+			"dependsOn": "Backend: Install Dependencies",
+			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"label": "Backend: Test",
+			"command": "/usr/local/bin/python -m pytest tests/",
+			"group": "test",
+			"options": {
+				"cwd": "${workspaceFolder}/backend"
+			},
+			"dependsOn": "Backend: Install Dependencies",
+			"problemMatcher": ["$python"]
+		},
+		{
+			"type": "shell",
+			"label": "Build All",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"Frontend: Build",
+				"Backend: Install Dependencies"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"label": "Test All",
+			"dependsOrder": "parallel",
+			"dependsOn": [
+				"Frontend: Test",
+				"Backend: Test"
+			],
+			"group": {
+				"kind": "test",
+				"isDefault": true
+			},
+			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"label": "Docker: Build Backend",
+			"command": "docker build -t openui-backend .",
+			"group": "build",
+			"options": {
+				"cwd": "${workspaceFolder}/backend"
+			},
+			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"label": "Docker: Run Backend",
+			"command": "docker run -p 7878:7878 -e OPENAI_API_KEY=${env:OPENAI_API_KEY} openui-backend",
+			"group": "build",
+			"isBackground": true,
+			"dependsOn": "Docker: Build Backend",
+			"problemMatcher": []
 		}
 	]
 }

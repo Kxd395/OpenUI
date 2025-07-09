@@ -1,8 +1,7 @@
 /// <reference types="vitest" />
-import eslintPlugin from '@nabla/vite-plugin-eslint'
 import react from '@vitejs/plugin-react'
 import type { PluginOption } from 'vite'
-import { defineConfig, splitVendorChunkPlugin } from 'vite'
+import { defineConfig } from 'vite'
 import mkcert from 'vite-plugin-mkcert'
 import { VitePWA } from 'vite-plugin-pwa'
 import tsconfigPaths from 'vite-tsconfig-paths'
@@ -72,7 +71,6 @@ export default defineConfig(({ mode }) => ({
 	},
 	plugins: [
 		tsconfigPaths(),
-		splitVendorChunkPlugin(),
 		react(),
 		...(mode === 'test' ? [] : plugins)
 	]

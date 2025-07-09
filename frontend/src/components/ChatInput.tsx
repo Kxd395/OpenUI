@@ -3,14 +3,16 @@ import { Button } from 'components/ui/button';
 import { Textarea } from 'components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from 'components/ui/tooltip';
 import { 
-	ArrowRightIcon, 
-	CheckIcon, 
-	Cross1Icon, 
-	BookmarkIcon,
-	TrashIcon,
-	ImageIcon 
-} from '@radix-ui/react-icons';
+	ArrowRight, 
+	Check, 
+	X, 
+	Bookmark,
+	Trash2,
+	Image as LucideImage 
+} from 'lucide-react';
 import { cn } from 'lib/utils';
+
+import Copilot from './Copilot/Copilot';
 
 interface ChatInputProps {
 	onSubmit: (query: string) => void;
@@ -21,6 +23,7 @@ interface ChatInputProps {
 	onSavePrompt?: (prompt: string) => void;
 	hasScreenshot?: boolean;
 	onRemoveScreenshot?: () => void;
+	onCopilotAction?: (action: string, query: string) => void;
 }
 
 export default function ChatInput({
@@ -31,7 +34,8 @@ export default function ChatInput({
 	onImageUpload,
 	onSavePrompt,
 	hasScreenshot = false,
-	onRemoveScreenshot
+	onRemoveScreenshot,
+	onCopilotAction
 }: ChatInputProps) {
 	const [query, setQuery] = useState('');
 	const [rows, setRows] = useState(1);
@@ -116,7 +120,7 @@ export default function ChatInput({
 					{/* Screenshot indicator */}
 					{hasScreenshot && (
 						<div className="mb-2 flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-							<ImageIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+							<LucideImage className="h-4 w-4 text-blue-600 dark:text-blue-400" />
 							<span className="text-sm text-blue-700 dark:text-blue-300">Screenshot attached</span>
 							{onRemoveScreenshot && (
 								<Button
@@ -125,7 +129,7 @@ export default function ChatInput({
 									onClick={onRemoveScreenshot}
 									className="ml-auto h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-800/50"
 								>
-									<Cross1Icon className="h-3 w-3" />
+									<X className="h-3 w-3" />
 								</Button>
 							)}
 						</div>
@@ -151,6 +155,10 @@ export default function ChatInput({
 								/>
 							</div>
 
+							{onCopilotAction && (
+								<Copilot onAction={(action) => onCopilotAction(action, query)} />
+							)}
+
 							{/* Action buttons */}
 							<div className="flex items-center gap-1 flex-shrink-0">
 								{/* Image upload */}
@@ -172,7 +180,7 @@ export default function ChatInput({
 													onClick={() => imageUploadRef.current?.click()}
 													className="h-8 w-8 p-0 hover:bg-muted"
 												>
-													<ImageIcon className="h-4 w-4" />
+													<LucideImage className="h-4 w-4" />
 												</Button>
 											</TooltipTrigger>
 											<TooltipContent>
@@ -193,7 +201,7 @@ export default function ChatInput({
 												onClick={handleSavePrompt}
 												className="h-8 w-8 p-0 hover:bg-muted"
 											>
-												<BookmarkIcon className="h-4 w-4" />
+												<Bookmark className="h-4 w-4" />
 											</Button>
 										</TooltipTrigger>
 										<TooltipContent>
@@ -213,7 +221,7 @@ export default function ChatInput({
 												onClick={handleClear}
 												className="h-8 w-8 p-0 hover:bg-muted"
 											>
-												<TrashIcon className="h-4 w-4" />
+												<Trash2 className="h-4 w-4" />
 											</Button>
 										</TooltipTrigger>
 										<TooltipContent>
@@ -235,9 +243,9 @@ export default function ChatInput({
 											{disabled ? (
 												<div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
 											) : editing ? (
-												<CheckIcon className="h-4 w-4" />
+												<Check className="h-4 w-4" />
 											) : (
-												<ArrowRightIcon className="h-4 w-4" />
+												<ArrowRight className="h-4 w-4" />
 											)}
 										</Button>
 									</TooltipTrigger>

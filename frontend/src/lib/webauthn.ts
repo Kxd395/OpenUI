@@ -72,7 +72,7 @@ export const createKey = async (
 		window.localStorage.setItem('credentialID', credential.id)
 		window.localStorage.setItem(
 			'credentialPublicKey',
-			encode(pub ?? new Uint8Array())
+			encode(pub ? pub : new ArrayBuffer(0))
 		)
 	}
 	return credential
